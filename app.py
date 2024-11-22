@@ -163,6 +163,4 @@ st.markdown(
 
 # Inputs
 pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100, value=5750)
-pci = st.number_input("PCI (kcal/kg)", min_value=0, step=100, value=5620)
-cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=9.2)
-umidade = st.number_input("% Umidade", min_value=
+pci = st.number_input("PCI (kcal/kg)", min_value=0, step
