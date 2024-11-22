@@ -109,7 +109,7 @@ def evaluate_coal(data):
                 "; ".join(reasons_text)
                 + ", podendo ser aceito sob determinadas condições. Contate a área técnica"
                 if reasons_text
-                else "Parâmetros dentro dos limites ideais."
+                else "Parâmetros dentro dos limites ideais. Enviar COA para análise completa."
             )
 
         return (
@@ -129,7 +129,7 @@ def evaluate_coal(data):
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
 st.markdown(
     """
-    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
+    <h1 style='text-align: center;'>Simulação Preliminar de Viabilidade do Carvão Mineral</h1>
     """,
     unsafe_allow_html=True,
 )
