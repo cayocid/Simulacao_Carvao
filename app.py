@@ -141,4 +141,24 @@ if st.button("Rodar Simulação"):
         "% Enxofre": enxofre,
     }
     df = evaluate_coal(data)
-    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0
+    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
+    st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
+
+    sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
+    ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
+    total_cost = 0
+    if sulfur_cost:
+        st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
+        total_cost += sulfur_cost
+    if ash_cost:
+        st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
+        total_cost += ash_cost
+    if total_cost > 0:
+        st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
+
+    # Exibir gráfico de radar
+    plot_radar_chart(data)
+
+# Frase no rodapé
+st.markdown("---")
+st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
