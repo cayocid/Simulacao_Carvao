@@ -18,8 +18,8 @@ SULFUR_COST_TABLE = {
     0.65: 5.24, 0.66: 5.33, 0.67: 5.39, 0.68: 5.45, 0.69: 5.47,
 }
 ASH_COST_TABLE = {
-    9.1: 0.0, 9.2: 0.0, 9.3: 10.54, 9.4: 21.08, 9.5: 31.62, 9.6: 42.15, 
-    9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10.0: 84.31, 
+    9.1: 0.0, 9.2: 0.0, 9.3: 10.54, 9.4: 21.08, 9.5: 31.62, 9.6: 42.15,
+    9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10.0: 84.31,
 }
 
 # Função para determinar o aumento recomendado no PCS com base na umidade
@@ -125,57 +125,7 @@ def evaluate_coal(data):
     df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"], df["Ajuste PCS (%)"] = zip(*df.apply(evaluate, axis=1))
     return df
 
-# Interface do Streamlit
-st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
-st.markdown(
-    """
-    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Inputs
-pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800.0)
-pci = st.number_input("PCI (kcal/kg)", min_value=0.0, step=100.0, value=5700.0)
-cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=9.0)
-umidade = st.number_input("% Umidade", min_value=0.0, max_value=100.0, step=0.1, value=16.0)
-enxofre = st.number_input("% Enxofre", min_value=0.0, max_value=10.0, step=0.01, value=0.60)
-
-if st.button("Rodar Simulação"):
-    data = {
-        "PCS (kcal/kg)": pcs,
-        "PCI (kcal/kg)": pci,
-        "% Cinzas": cinzas,
-        "% Umidade": umidade,
-        "% Enxofre": enxofre,
-    }
-    df = evaluate_coal(data)
-    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
-    st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
-
-    sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
-    ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
-    pcs_adjustment = df["Ajuste PCS (%)"].iloc[0]
-    total_cost = 0
-
-    if sulfur_cost:
-        st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
-        total_cost += sulfur_cost
-    if ash_cost:
-        st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
-        total_cost += ash_cost
-    if pcs_adjustment:
-        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
-
-    if total_cost > 0:
-        st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
-
-    # Exibir gráfico de radar apenas se o carvão não estiver na zona vermelha
-    if df["Viabilidade"].iloc[0] != "Vermelho":
-        st.write("### Gráfico de Avaliação de Parâmetros")
-        plot_radar_chart(data)
-
-# Função para plotar o gráfico de radar com zonas invertidas
+# Função para plotar gráfico de radar
 def plot_radar_chart(data):
     variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
     max_limits = [5800, 5700, 10, 17, 0.7]
@@ -209,6 +159,54 @@ def plot_radar_chart(data):
 
     st.pyplot(fig)
 
+# Interface do Streamlit
+st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
+st.markdown(
+    """
+    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Inputs
+pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800.0)
+pci = st.number_input("PCI (kcal/kg)", min_value=0.0, step=100.0, value=5700.0)
+cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=9.0)
+umidade = st.number_input("% Umidade", min_value=0.0, max_value=100.0, step=0.1, value=16.0)
+enxofre = st.number_input("% Enxofre", min_value=0.0, max_value=10.0, step=0.01, value=0.60)
+
+if st.button("Rodar Simulação"):
+    data = {
+        "PCS (kcal/kg)": pcs,
+        "PCI (kcal/kg)": pci,
+        "% Cinzas": cinzas,
+        "% Umidade": umidade,
+        "% Enxofre": enxofre,
+    }
+    df = evaluate_coal(data)
+    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
+    st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
+
+    sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
+    ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
+    pcs_adjust = df["Ajuste PCS (%)"].iloc[0]
+    total_cost = 0
+
+    if sulfur_cost:
+        st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
+        total_cost += sulfur_cost
+    if ash_cost:
+        st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
+        total_cost += ash_cost
+    if pcs_adjust > 0:
+        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
+    if total_cost > 0:
+        st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
+
+    # Exibir gráfico de radar
+    plot_radar_chart(data)
+
 # Frase no rodapé
 st.markdown("---")
 st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
+
