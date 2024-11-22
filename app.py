@@ -18,8 +18,8 @@ SULFUR_COST_TABLE = {
     0.65: 5.24, 0.66: 5.33, 0.67: 5.39, 0.68: 5.45, 0.69: 5.47,
 }
 ASH_COST_TABLE = {
-    9.1: 0.0, 9.2: 0.0, 9.3: 10.54, 9.4: 21.08, 9.5: 31.62, 9.6: 42.15,
-    9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10.0: 84.31,
+    9.1: 0.0, 9.2: 0.0, 9.3: 10.54, 9.4: 21.08, 9.5: 31.62, 9.6: 42.15, 
+    9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10.0: 84.31, 
 }
 
 # Função para determinar o aumento recomendado no PCS com base na umidade
@@ -125,40 +125,6 @@ def evaluate_coal(data):
     df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"], df["Ajuste PCS (%)"] = zip(*df.apply(evaluate, axis=1))
     return df
 
-# Função para plotar gráfico de radar
-def plot_radar_chart(data):
-    variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
-    max_limits = [5800, 5700, 10, 17, 0.7]
-    min_limits = [5600, 5600, 8, 15, 0.5]
-
-    normalized_values = [(data[var] - min_limits[i]) / (max_limits[i] - min_limits[i]) for i, var in enumerate(variables)]
-    normalized_green = [0.4] * len(variables)
-    normalized_yellow = [0.6] * len(variables)
-    normalized_red = [0.8] * len(variables)
-
-    angles = np.linspace(0, 2 * np.pi, len(variables), endpoint=False).tolist()
-    angles += angles[:1]
-
-    normalized_values += normalized_values[:1]
-    normalized_green += normalized_green[:1]
-    normalized_yellow += normalized_yellow[:1]
-    normalized_red += normalized_red[:1]
-
-    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
-    ax.fill(angles, normalized_red, color="red", alpha=0.2, label="Zona Vermelha")
-    ax.fill(angles, normalized_yellow, color="yellow", alpha=0.2, label="Zona Amarela")
-    ax.fill(angles, normalized_green, color="green", alpha=0.2, label="Zona Verde")
-    ax.plot(angles, normalized_values, color="blue", linewidth=2, label="Carvão Avaliado")
-    ax.fill(angles, normalized_values, color="blue", alpha=0.3)
-
-    ax.set_yticks([])
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(variables, fontsize=10)
-    ax.set_title("Avaliação de Viabilidade do Carvão", fontsize=14, pad=20)
-    ax.legend(loc="upper right", bbox_to_anchor=(1.2, 1.2))
-
-    st.pyplot(fig)
-
 # Interface do Streamlit
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
 st.markdown(
@@ -196,17 +162,40 @@ if st.button("Rodar Simulação"):
         st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
         total_cost += sulfur_cost
     if ash_cost:
-        st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
+        st.write(f"Custo adicional devido às cinzas:
+        {ash_cost:.2f} USD/t")
         total_cost += ash_cost
-    if pcs_adjust > 0:
-        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
     if total_cost > 0:
         st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
+    if pcs_adjust and pcs_adjust > 0:
+        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
 
-    # Exibir gráfico de radar
-    plot_radar_chart(data)
+    # Exibir gráfico de radar caso os parâmetros estejam na zona verde ou amarela
+    if df["Viabilidade"].iloc[0] in ["Verde", "Amarelo"]:
+        def plot_radar_chart(data):
+            variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
+            max_limits = [CRITERIA[var]["green_min"] if "green_min" in CRITERIA[var] else max(data[var] for var in data) for var in variables]
+            min_limits = [CRITERIA[var]["red_max"] if "red_max" in CRITERIA[var] else min(data[var] for var in data) for var in variables]
+
+            normalized_values = [
+                (data[var] - min_limits[i]) / (max_limits[i] - min_limits[i]) for i, var in enumerate(variables)
+            ]
+            angles = np.linspace(0, 2 * np.pi, len(variables), endpoint=False).tolist()
+            angles += angles[:1]
+            normalized_values += normalized_values[:1]
+
+            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+            ax.fill(angles, normalized_values, color="blue", alpha=0.25)
+            ax.plot(angles, normalized_values, color="blue", linewidth=2)
+            ax.set_yticks([])
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(variables)
+            ax.set_title("Avaliação de Parâmetros do Carvão", fontsize=14, pad=20)
+
+            st.pyplot(fig)
+
+        plot_radar_chart(data)
 
 # Frase no rodapé
 st.markdown("---")
 st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
-
