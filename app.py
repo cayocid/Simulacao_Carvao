@@ -35,7 +35,7 @@ def evaluate_coal(data):
             reasons.append("PCS fora do limite permitido")
         elif row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["green_min"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("PCS abaixo do ideal, podendo ser aceito sob determinadas condições.")
+            reasons.append("PCS abaixo do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
 
         # Avaliação de PCI
         if row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["red_max"]:
@@ -43,7 +43,7 @@ def evaluate_coal(data):
             reasons.append("PCI fora do limite permitido")
         elif row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["green_min"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("PCI abaixo do ideal, podendo ser aceito sob determinadas condições.")
+            reasons.append("PCI abaixo do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
 
         # Avaliação de Cinzas
         if row["% Cinzas"] > CRITERIA["% Cinzas"]["red_min"]:
@@ -51,7 +51,7 @@ def evaluate_coal(data):
             reasons.append("Cinzas fora do limite permitido")
         elif row["% Cinzas"] > CRITERIA["% Cinzas"]["green_max"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("Cinzas acima do ideal, podendo ser aceito sob determinadas condições.")
+            reasons.append("Cinzas acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
             rounded_ash = round(row["% Cinzas"], 1)
             if rounded_ash in ASH_COST_TABLE:
                 ash_cost = ASH_COST_TABLE[rounded_ash]
@@ -62,7 +62,7 @@ def evaluate_coal(data):
             reasons.append("Umidade fora do limite permitido")
         elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("Umidade acima do ideal, podendo ser aceito sob determinadas condições.")
+            reasons.append("Umidade acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
@@ -70,14 +70,14 @@ def evaluate_coal(data):
             reasons.append("Enxofre fora do limite permitido")
         elif row["% Enxofre"] > CRITERIA["% Enxofre"]["green_max"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("Enxofre acima do ideal, podendo ser aceito sob determinadas condições.")
+            reasons.append("Enxofre acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
             rounded_sulfur = round(row["% Enxofre"], 2)
             if rounded_sulfur in SULFUR_COST_TABLE:
                 sulfur_cost = SULFUR_COST_TABLE[rounded_sulfur]
 
         return (
             status,
-            "; ".join(reasons) if reasons else "Parâmetros dentro dos limites ideais.",
+            "; ".join(reasons) if reasons else "Parâmetros dentro dos limites ideais. Solicitar COA para análise completa",
             sulfur_cost,
             ash_cost,
         )
@@ -101,7 +101,12 @@ def plot_general_graph():
 
 # Interface do Streamlit
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
-st.title("Simulação de Viabilidade do Carvão Mineral")
+st.markdown(
+    """
+    <h1 style='text-align: center;'>Simulação Preliminar de Viabilidade do Carvão Mineral</h1>
+    """,
+    unsafe_allow_html=True
+)
 
 # Inputs
 pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100)
@@ -139,4 +144,4 @@ if st.button("Rodar Simulação"):
 
 # Frase no rodapé
 st.markdown("---")
-st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Esta análise preliminar é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
