@@ -128,10 +128,10 @@ st.markdown(
 )
 
 # Inputs
-pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800)
-pci = st.number_input("PCI (kcal/kg)", min_value=0.0, step=100.0, value=5700)
-cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=10)
-umidade = st.number_input("% Umidade", min_value=0.0, max_value=100.0, step=0.1, value=16)
+pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800.0)
+pci = st.number_input("PCI (kcal/kg)", min_value=0.0, step=100.0, value=5700.0)
+cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=9.0)
+umidade = st.number_input("% Umidade", min_value=0.0, max_value=100.0, step=0.1, value=16.0)
 enxofre = st.number_input("% Enxofre", min_value=0.0, max_value=10.0, step=0.01, value=0.6)
 
 if st.button("Rodar Simulação"):
