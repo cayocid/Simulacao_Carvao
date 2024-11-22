@@ -162,6 +162,49 @@ st.markdown(
 )
 
 # Inputs
-pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100, value=5750)
-pci = st.number_input("PCI (kcal/kg)", min_value=0, step=100, value=5620)
-cinzas = st.number_input("% Cinzas", min_value=0.0, max
+pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100, value=5800)
+pci = st.number_input("PCI (kcal/kg)", min_value=0, step=100, value=5700)
+cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=10)
+umidade = st.number_input("% Umidade", min_value=0.0, max_value=100.0, step=0.1, value=16)
+enxofre = st.number_input("% Enxofre", min_value=0.0, max_value=10.0, step=0.01, value=0.6)
+
+if st.button("Rodar Simulação"):
+    data = {
+        "PCS (kcal/kg)": pcs,
+        "PCI (kcal/kg)": pci,
+        "% Cinzas": cinzas,
+        "% Umidade": umidade,
+        "% Enxofre": enxofre,
+    }
+    df = evaluate_coal(data)
+    status = df["Viabilidade"].iloc[0]
+    justification = df["Justificativa"].iloc[0]
+    sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
+    ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
+    pcs_adjustment = df["Ajuste PCS (%)"].iloc[0]
+
+    # Exibir resultados
+    st.write(f"**Viabilidade:** {status}")
+    st.write(f"**Justificativa:** {justification}")
+
+    if status == "Vermelho":
+        st.write("**Atenção:** A aquisição deste carvão **não é recomendada** devido ao(s) parâmetro(s) excedente(s).")
+    else:
+        total_cost = 0
+        if sulfur_cost:
+            st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
+            total_cost += sulfur_cost
+        if ash_cost:
+            st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
+            total_cost += ash_cost
+        if pcs_adjustment:
+            st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjustment:.2f}% devido à umidade excedente.")
+        if total_cost > 0:
+            st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
+
+        # Exibir gráfico de radar se o status não for vermelho
+        plot_radar_chart(data)
+
+# Frase no rodapé
+st.markdown("---")
+st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
