@@ -19,7 +19,7 @@ SULFUR_COST_TABLE = {
 }
 ASH_COST_TABLE = {
     9.1: 0.0, 9.2: 0.0, 9.3: 10.54, 9.4: 21.08, 9.5: 31.62, 9.6: 42.15, 
-    9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10,0: 84.31, 
+    9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10.0: 84.31, 
 }
 
 # Função para determinar o aumento recomendado no PCS com base na umidade
