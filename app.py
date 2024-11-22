@@ -8,7 +8,7 @@ CRITERIA = {
     "PCS (kcal/kg)": {"green_min": 5800, "yellow_min": 5701, "red_max": 5700},
     "PCI (kcal/kg)": {"green_min": 5700, "yellow_min": 5601, "red_max": 5600},
     "% Cinzas": {"green_max": 9, "yellow_max": 9.9, "red_min": 10},
-    "% Umidade": {"green_max": 16, "yellow_max": 16.9, "red_min": 17},
+    "% Umidade": {"green_max": 16, "yellow_max": 17.9, "red_min": 18},
     "% Enxofre": {"green_max": 0.6, "yellow_max": 0.69, "red_min": 0.7},
 }
 
