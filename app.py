@@ -1,4 +1,4 @@
-import streamlit as st
+r COA para análise completaimport streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -96,8 +96,8 @@ def evaluate_coal(data):
         # Construir justificativa
         if reasons_red:
             justification = (
-                f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado. "
-                f"Recomenda-se não seguir com a aquisição."
+                f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, "
+                f"não sendo recomendada a sua aquisição."
             )
         else:
             reasons_text = []
@@ -109,7 +109,7 @@ def evaluate_coal(data):
                 "; ".join(reasons_text)
                 + ", podendo ser aceito sob determinadas condições. Contate a área técnica"
                 if reasons_text
-                else "Parâmetros dentro dos limites ideais."
+                else "Parâmetros dentro dos limites ideais. Enviar COA para análise completa."
             )
 
         return (
