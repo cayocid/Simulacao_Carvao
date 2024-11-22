@@ -107,7 +107,7 @@ def evaluate_coal(data):
                 reasons_text.append(f"{', '.join(reasons_above)} acima do ideal")
             justification = (
                 "; ".join(reasons_text)
-                + ", podendo ser aceito sob determinadas condições. Contate a área técnica"
+                + ", podendo ser aceito sob determinadas condições. Contate a área técnica."
                 if reasons_text
                 else "Parâmetros dentro dos limites ideais. Enviar COA para análise completa."
             )
