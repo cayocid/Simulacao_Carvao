@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Critérios configuráveis para avaliação
 CRITERIA = {
@@ -77,7 +78,7 @@ def evaluate_coal(data):
 
         return (
             status,
-            "; ".join(reasons) if reasons else "Parâmetros dentro dos limites ideais. Solicitar COA para análise completa",
+            "; ".join(reasons) if reasons else "Parâmetros dentro dos limites ideais.",
             sulfur_cost,
             ash_cost,
         )
@@ -87,26 +88,55 @@ def evaluate_coal(data):
     df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"] = zip(*df.apply(evaluate, axis=1))
     return df
 
-# Função para exibir o gráfico geral
-def plot_general_graph():
-    plt.figure(figsize=(10, 6))
-    plt.axhline(y=CRITERIA["% Cinzas"]["green_max"], color="green", linestyle="--", label="Zona Verde")
-    plt.axhline(y=CRITERIA["% Cinzas"]["yellow_max"], color="yellow", linestyle="--", label="Zona Amarela")
-    plt.axhline(y=CRITERIA["% Cinzas"]["red_min"], color="red", linestyle="--", label="Zona Vermelha")
-    plt.title("Zonas de Cores para Parâmetros do Carvão")
-    plt.xlabel("% Cinzas")
-    plt.ylabel("Parâmetro")
-    plt.legend()
-    st.pyplot(plt)
+# Função para exibir o gráfico de radar
+def plot_radar_chart(data):
+    variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
+    green_limits = [
+        CRITERIA["PCS (kcal/kg)"]["green_min"],
+        CRITERIA["PCI (kcal/kg)"]["green_min"],
+        CRITERIA["% Cinzas"]["green_max"],
+        CRITERIA["% Umidade"]["green_max"],
+        CRITERIA["% Enxofre"]["green_max"],
+    ]
+    red_limits = [
+        CRITERIA["PCS (kcal/kg)"]["red_max"],
+        CRITERIA["PCI (kcal/kg)"]["red_max"],
+        CRITERIA["% Cinzas"]["red_min"],
+        CRITERIA["% Umidade"]["red_min"],
+        CRITERIA["% Enxofre"]["red_min"],
+    ]
+    values = [
+        data["PCS (kcal/kg)"],
+        data["PCI (kcal/kg)"],
+        data["% Cinzas"],
+        data["% Umidade"],
+        data["% Enxofre"],
+    ]
+    normalized_values = [
+        max(0, min(1, (val - red) / (green - red))) if val >= red else 0
+        for val, green, red in zip(values, green_limits, red_limits)
+    ]
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    angles = np.linspace(0, 2 * np.pi, len(variables), endpoint=False).tolist()
+    angles += angles[:1]
+    normalized_values += normalized_values[:1]
+    ax.fill(angles, normalized_values, color="blue", alpha=0.25)
+    ax.plot(angles, normalized_values, color="blue", linewidth=2, label="Carvão Avaliado")
+    ax.set_yticks([])
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(variables, fontsize=10)
+    ax.set_title("Avaliação do Carvão nas Zonas", fontsize=14, pad=20)
+    ax.legend(loc="upper right", bbox_to_anchor=(1.2, 1.1))
+    st.pyplot(fig)
 
 # Interface do Streamlit
-st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
 st.markdown(
     """
     <h1 style='text-align: center;'>Simulação Preliminar de Viabilidade do Carvão Mineral</h1>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
+st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
 
 # Inputs
 pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100)
@@ -139,9 +169,8 @@ if st.button("Rodar Simulação"):
     if total_cost > 0:
         st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
 
-    # Exibir gráfico geral
-    plot_general_graph()
+    # Exibir gráfico radar com todas as variáveis
+    plot_radar_chart(data)
 
-# Frase no rodapé
 st.markdown("---")
 st.markdown("<p style='text-align: center;'>Esta análise preliminar é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
