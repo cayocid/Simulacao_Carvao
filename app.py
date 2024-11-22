@@ -32,7 +32,8 @@ def get_pcs_adjustment(humidity):
 # Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
     def evaluate(row):
-        reasons = []
+        reasons_below = []  # Parâmetros abaixo do ideal
+        reasons_above = []  # Parâmetros acima do ideal
         status = "Verde"
         sulfur_cost = None
         ash_cost = None
@@ -41,26 +42,29 @@ def evaluate_coal(data):
         # Avaliação de PCS
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
             status = "Vermelho"
-            reasons.append("PCS fora do limite permitido")
+            reasons_below.append("PCS")
         elif row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["green_min"]:
-            if status == "Verde": status = "Amarelo"
-            reasons.append("PCS abaixo do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            if status == "Verde":
+                status = "Amarelo"
+            reasons_below.append("PCS")
 
         # Avaliação de PCI
         if row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["red_max"]:
             status = "Vermelho"
-            reasons.append("PCI fora do limite permitido")
+            reasons_below.append("PCI")
         elif row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["green_min"]:
-            if status == "Verde": status = "Amarelo"
-            reasons.append("PCI abaixo do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            if status == "Verde":
+                status = "Amarelo"
+            reasons_below.append("PCI")
 
         # Avaliação de Cinzas
         if row["% Cinzas"] > CRITERIA["% Cinzas"]["red_min"]:
             status = "Vermelho"
-            reasons.append("Cinzas fora do limite permitido")
+            reasons_above.append("Cinzas")
         elif row["% Cinzas"] > CRITERIA["% Cinzas"]["green_max"]:
-            if status == "Verde": status = "Amarelo"
-            reasons.append("Cinzas acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            if status == "Verde":
+                status = "Amarelo"
+            reasons_above.append("Cinzas")
             rounded_ash = round(row["% Cinzas"], 1)
             if rounded_ash in ASH_COST_TABLE:
                 ash_cost = ASH_COST_TABLE[rounded_ash]
@@ -68,27 +72,42 @@ def evaluate_coal(data):
         # Avaliação de Umidade
         if row["% Umidade"] > CRITERIA["% Umidade"]["red_min"]:
             status = "Vermelho"
-            reasons.append("Umidade fora do limite permitido")
+            reasons_above.append("Umidade")
             pcs_adjustment = get_pcs_adjustment(row["% Umidade"])
         elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
-            if status == "Verde": status = "Amarelo"
-            reasons.append("Umidade acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            if status == "Verde":
+                status = "Amarelo"
+            reasons_above.append("Umidade")
             pcs_adjustment = get_pcs_adjustment(row["% Umidade"])
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
             status = "Vermelho"
-            reasons.append("Enxofre fora do limite permitido")
+            reasons_above.append("Enxofre")
         elif row["% Enxofre"] > CRITERIA["% Enxofre"]["green_max"]:
-            if status == "Verde": status = "Amarelo"
-            reasons.append("Enxofre acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            if status == "Verde":
+                status = "Amarelo"
+            reasons_above.append("Enxofre")
             rounded_sulfur = round(row["% Enxofre"], 2)
             if rounded_sulfur in SULFUR_COST_TABLE:
                 sulfur_cost = SULFUR_COST_TABLE[rounded_sulfur]
 
+        # Construir justificativa otimizada
+        reasons_text = []
+        if reasons_below:
+            reasons_text.append(f"{', '.join(reasons_below)} abaixo do ideal")
+        if reasons_above:
+            reasons_text.append(f"{', '.join(reasons_above)} acima do ideal")
+        justification = (
+            "; ".join(reasons_text)
+            + ", podendo ser aceito sob determinadas condições. Contate a área técnica"
+            if reasons_text
+            else "Parâmetros dentro dos limites ideais."
+        )
+
         return (
             status,
-            "; ".join(reasons) if reasons else "Parâmetros dentro dos limites ideais.",
+            justification,
             sulfur_cost,
             ash_cost,
             pcs_adjustment,
