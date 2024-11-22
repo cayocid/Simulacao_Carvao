@@ -162,8 +162,7 @@ if st.button("Rodar Simulação"):
         st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
         total_cost += sulfur_cost
     if ash_cost:
-        st.write(f"Custo adicional devido às cinzas:
-        {ash_cost:.2f} USD/t")
+        st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
         total_cost += ash_cost
     if total_cost > 0:
         st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
