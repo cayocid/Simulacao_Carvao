@@ -123,7 +123,12 @@ def plot_radar_chart(data):
 
 # Interface do Streamlit
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
-st.title("Simulação de Viabilidade do Carvão Mineral")
+st.markdown(
+    """
+    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Inputs
 pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100, value=5750)
