@@ -22,6 +22,13 @@ ASH_COST_TABLE = {
     9.6: 63.23, 9.7: 73.77, 9.8: 84.31, 9.9: 94.85, 10.0: 105.38,
 }
 
+# Função para determinar o aumento recomendado no PCS com base na umidade
+def get_pcs_adjustment(humidity):
+    if humidity <= 16:
+        return 0
+    adjustment = (humidity - 16) * 2  # Cada 1% acima de 16 aumenta o PCS necessário em 2%
+    return round(adjustment, 2)
+
 # Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
     def evaluate(row):
@@ -29,6 +36,7 @@ def evaluate_coal(data):
         status = "Verde"
         sulfur_cost = None
         ash_cost = None
+        pcs_adjustment = None
 
         # Avaliação de PCS
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
@@ -61,9 +69,11 @@ def evaluate_coal(data):
         if row["% Umidade"] > CRITERIA["% Umidade"]["red_min"]:
             status = "Vermelho"
             reasons.append("Umidade fora do limite permitido")
+            pcs_adjustment = get_pcs_adjustment(row["% Umidade"])
         elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
             if status == "Verde": status = "Amarelo"
             reasons.append("Umidade acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            pcs_adjustment = get_pcs_adjustment(row["% Umidade"])
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
@@ -81,46 +91,13 @@ def evaluate_coal(data):
             "; ".join(reasons) if reasons else "Parâmetros dentro dos limites ideais.",
             sulfur_cost,
             ash_cost,
+            pcs_adjustment,
         )
 
     # Avaliar cada registro no DataFrame
     df = pd.DataFrame(data, index=[0])
-    df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"] = zip(*df.apply(evaluate, axis=1))
+    df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"], df["Ajuste PCS (%)"] = zip(*df.apply(evaluate, axis=1))
     return df
-
-# Função para plotar o gráfico de radar com zonas invertidas
-def plot_radar_chart(data):
-    variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
-    max_limits = [5800, 5700, 10, 17, 0.7]
-    min_limits = [5600, 5600, 8, 15, 0.5]
-
-    normalized_values = [(data[var] - min_limits[i]) / (max_limits[i] - min_limits[i]) for i, var in enumerate(variables)]
-    normalized_green = [0.4] * len(variables)
-    normalized_yellow = [0.6] * len(variables)
-    normalized_red = [0.8] * len(variables)
-
-    angles = np.linspace(0, 2 * np.pi, len(variables), endpoint=False).tolist()
-    angles += angles[:1]
-
-    normalized_values += normalized_values[:1]
-    normalized_green += normalized_green[:1]
-    normalized_yellow += normalized_yellow[:1]
-    normalized_red += normalized_red[:1]
-
-    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
-    ax.fill(angles, normalized_red, color="red", alpha=0.2, label="Zona Vermelha")
-    ax.fill(angles, normalized_yellow, color="yellow", alpha=0.2, label="Zona Amarela")
-    ax.fill(angles, normalized_green, color="green", alpha=0.2, label="Zona Verde")
-    ax.plot(angles, normalized_values, color="blue", linewidth=2, label="Carvão Avaliado")
-    ax.fill(angles, normalized_values, color="blue", alpha=0.3)
-
-    ax.set_yticks([])
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(variables, fontsize=10)
-    ax.set_title("Avaliação de Viabilidade do Carvão", fontsize=14, pad=20)
-    ax.legend(loc="upper right", bbox_to_anchor=(1.2, 1.2))
-
-    st.pyplot(fig)
 
 # Interface do Streamlit
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
@@ -152,6 +129,8 @@ if st.button("Rodar Simulação"):
 
     sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
     ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
+    pcs_adjustment = df["Ajuste PCS (%)"].iloc[0]
+
     total_cost = 0
     if sulfur_cost:
         st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
@@ -159,12 +138,7 @@ if st.button("Rodar Simulação"):
     if ash_cost:
         st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
         total_cost += ash_cost
+    if pcs_adjustment:
+        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjustment:.2f}% devido à umidade excedente.")
     if total_cost > 0:
         st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
-
-    # Exibir gráfico de radar
-    plot_radar_chart(data)
-
-# Frase no rodapé
-st.markdown("---")
-st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
