@@ -1,10 +1,3 @@
-#Simulacao_de_Viabilidade_Carvao_Mineral
-#Código sem auto-execução.
-#Código para Github
-
-
-
-# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -42,7 +35,7 @@ def evaluate_coal(data):
             reasons.append("PCS fora do limite permitido")
         elif row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["green_min"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("PCS abaixo do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            reasons.append("PCS abaixo do ideal, podendo ser aceito sob determinadas condições.")
 
         # Avaliação de PCI
         if row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["red_max"]:
@@ -50,7 +43,7 @@ def evaluate_coal(data):
             reasons.append("PCI fora do limite permitido")
         elif row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["green_min"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("PCI abaixo do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            reasons.append("PCI abaixo do ideal, podendo ser aceito sob determinadas condições.")
 
         # Avaliação de Cinzas
         if row["% Cinzas"] > CRITERIA["% Cinzas"]["red_min"]:
@@ -58,7 +51,7 @@ def evaluate_coal(data):
             reasons.append("Cinzas fora do limite permitido")
         elif row["% Cinzas"] > CRITERIA["% Cinzas"]["green_max"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("Cinzas acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            reasons.append("Cinzas acima do ideal, podendo ser aceito sob determinadas condições.")
             rounded_ash = round(row["% Cinzas"], 1)
             if rounded_ash in ASH_COST_TABLE:
                 ash_cost = ASH_COST_TABLE[rounded_ash]
@@ -69,7 +62,7 @@ def evaluate_coal(data):
             reasons.append("Umidade fora do limite permitido")
         elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("Umidade acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            reasons.append("Umidade acima do ideal, podendo ser aceito sob determinadas condições.")
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
@@ -77,7 +70,7 @@ def evaluate_coal(data):
             reasons.append("Enxofre fora do limite permitido")
         elif row["% Enxofre"] > CRITERIA["% Enxofre"]["green_max"]:
             if status == "Verde": status = "Amarelo"
-            reasons.append("Enxofre acima do ideal, podendo ser aceito sob determinadas condições. Contate a área técnica")
+            reasons.append("Enxofre acima do ideal, podendo ser aceito sob determinadas condições.")
             rounded_sulfur = round(row["% Enxofre"], 2)
             if rounded_sulfur in SULFUR_COST_TABLE:
                 sulfur_cost = SULFUR_COST_TABLE[rounded_sulfur]
@@ -147,6 +140,3 @@ if st.button("Rodar Simulação"):
 # Frase no rodapé
 st.markdown("---")
 st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
-"""
-
-
