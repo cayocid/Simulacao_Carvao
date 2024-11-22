@@ -163,4 +163,5 @@ st.markdown(
 
 # Inputs
 pcs = st.number_input("PCS (kcal/kg)", min_value=0, step=100, value=5750)
-pci = st.number_input("PCI (kcal/kg)", min_value=0, step
+pci = st.number_input("PCI (kcal/kg)", min_value=0, step=100, value=5620)
+cinzas = st.number_input("% Cinzas", min_value=0.0, max
