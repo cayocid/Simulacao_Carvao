@@ -8,7 +8,7 @@ CRITERIA = {
     "PCS (kcal/kg)": {"green_min": 5800, "yellow_min": 5701, "red_max": 5700},
     "PCI (kcal/kg)": {"green_min": 5700, "yellow_min": 5601, "red_max": 5600},
     "% Cinzas": {"green_max": 9, "yellow_max": 9.9, "red_min": 10},
-    "% Umidade": {"green_max": 16, "yellow_max": 17.9, "red_min": 18},
+    "% Umidade": {"green_max": 16, "yellow_max": 16.9, "red_min": 17},
     "% Enxofre": {"green_max": 0.6, "yellow_max": 0.69, "red_min": 0.7},
 }
 
@@ -109,7 +109,7 @@ def evaluate_coal(data):
                 "; ".join(reasons_text)
                 + ", podendo ser aceito sob determinadas condições. Contate a área técnica"
                 if reasons_text
-                else "Parâmetros dentro dos limites ideais. Enviar COA para análise completa."
+                else "Parâmetros dentro dos limites ideais."
             )
 
         return (
@@ -129,7 +129,7 @@ def evaluate_coal(data):
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
 st.markdown(
     """
-    <h1 style='text-align: center;'>Simulação Preliminar de Viabilidade do Carvão Mineral</h1>
+    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
     """,
     unsafe_allow_html=True,
 )
@@ -167,3 +167,35 @@ if st.button("Rodar Simulação"):
             total_cost += ash_cost
         if total_cost > 0:
             st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
+        if pcs_adjust and pcs_adjust > 0:
+            st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
+
+        # Exibir gráfico de radar caso os parâmetros estejam na zona verde ou amarela
+        def plot_radar_chart(data):
+            variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
+            max_limits = [CRITERIA[var]["green_min"] if "green_min" in CRITERIA[var] else max(data[var] for var in data) for var in variables]
+            min_limits = [CRITERIA[var]["red_max"] if "red_max" in CRITERIA[var] else min(data[var] for var in data) for var in variables]
+
+            normalized_values = [
+                (data[var] - min_limits[i]) / (max_limits[i] - min_limits[i]) for i, var in enumerate(variables)
+            ]
+            angles = np.linspace(0, 2 * np.pi, len(variables), endpoint=False).tolist()
+            angles += angles[:1]
+            normalized_values += normalized_values[:1]
+
+            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+            ax.fill(angles, normalized_values, color="blue", alpha=0.25)
+            ax.plot(angles, normalized_values, color="blue", linewidth=2)
+            ax.set_yticks([])
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(variables)
+            ax.set_title("Avaliação de Parâmetros do Carvão", fontsize=14, pad=20)
+
+            st.pyplot(fig)
+
+        plot_radar_chart(data)
+
+# Frase no rodapé
+st.markdown("---")
+st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
+
