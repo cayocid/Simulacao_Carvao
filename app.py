@@ -158,9 +158,8 @@ if st.button("Rodar Simulação"):
         total_cost += ash_cost
     if total_cost > 0:
         st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
-    if pcs_adjust and pcs
-_adjust > 0:
-        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
+    if pcs_adjust and pcs_adjust > 0:
+    st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
 
     # Exibir gráfico de radar caso os parâmetros estejam na zona verde ou amarela
     if df["Viabilidade"].iloc[0] in ["Verde", "Amarelo"]:
