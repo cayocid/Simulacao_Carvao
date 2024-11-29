@@ -164,10 +164,8 @@ if st.button("Rodar Simulação"):
     if ash_cost:
         st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
         total_cost += ash_cost
-    if total_cost > 
-0:
+    if total_cost > 0:
         st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
-
     if pcs_adjust and pcs_adjust > 0:
         st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
 
