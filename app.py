@@ -85,20 +85,18 @@ def evaluate_coal(data):
             reasons_yellow.append("Enxofre")
 
         # Construir justificativa
-        if reasons_red:
+        if status == "Verde":
+            justification = "Carvão Tecnicamente Viável. Parâmetros dentro dos limites ideais."
+        elif status == "Amarelo":
+            reasons_text = f"{', '.join(reasons_yellow)} na zona amarela"
             justification = (
-                f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, "
-                f"não sendo recomendada a sua aquisição."
+                f"Carvão com restrições técnicas: {reasons_text}. "
+                "Pode ser aceito sob determinadas condições. Contate a área técnica."
             )
-        else:
-            reasons_text = []
-            if reasons_yellow:
-                reasons_text.append(f"{', '.join(reasons_yellow)} na zona amarela")
+        elif status == "Vermelho":
             justification = (
-                "; ".join(reasons_text)
-                + ", podendo ser aceito sob determinadas condições. Contate a área técnica."
-                if reasons_text
-                else "Parâmetros dentro dos limites ideais."
+                f"Carvão tecnicamente inviável. Parâmetro(s) {', '.join(reasons_red)} "
+                "fora do limite especificado. Não sendo recomendada a sua aquisição."
             )
 
         return status, justification, total_cost, moisture_cost, ash_cost, sulfur_cost
@@ -132,6 +130,8 @@ if st.button("Rodar Simulação"):
         "% Enxofre": enxofre,
     }
     df = evaluate_coal(data)
+    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
+    st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
     st.markdown(f"**Custo Total Adicional (USD/t): {df['Custo Total Adicional (USD/t)'].iloc[0]:.2f}**")
     st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Umidade (USD/t): {df['Custo Umidade (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
     st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Cinzas (USD/t): {df['Custo Cinzas (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
