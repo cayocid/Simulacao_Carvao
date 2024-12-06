@@ -37,7 +37,12 @@ def evaluate_coal(data):
         reasons_red = []  # Parâmetros na zona vermelha
         reasons_yellow = []  # Parâmetros na zona amarela
         status = "Verde"
-        total_cost = 0
+
+        # Custos individuais
+        moisture_cost = calculate_moisture_cost(row["PCS (kcal/kg)"], row["% Umidade"])
+        ash_cost = calculate_ash_cost(row["% Cinzas"])
+        sulfur_cost = calculate_sulfur_cost(row["% Enxofre"])
+        total_cost = moisture_cost + ash_cost + sulfur_cost
 
         # Avaliação de PCS
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
@@ -59,31 +64,25 @@ def evaluate_coal(data):
         if row["% Cinzas"] > CRITERIA["% Cinzas"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Cinzas")
-            total_cost += calculate_ash_cost(row["% Cinzas"])
         elif row["% Cinzas"] > CRITERIA["% Cinzas"]["green_max"]:
             status = "Amarelo"
             reasons_yellow.append("Cinzas")
-            total_cost += calculate_ash_cost(row["% Cinzas"])
 
         # Avaliação de Umidade
         if row["% Umidade"] > CRITERIA["% Umidade"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Umidade")
-            total_cost += calculate_moisture_cost(row["PCS (kcal/kg)"], row["% Umidade"])
         elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
             status = "Amarelo"
             reasons_yellow.append("Umidade")
-            total_cost += calculate_moisture_cost(row["PCS (kcal/kg)"], row["% Umidade"])
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Enxofre")
-            total_cost += calculate_sulfur_cost(row["% Enxofre"])
         elif row["% Enxofre"] > CRITERIA["% Enxofre"]["green_max"]:
             status = "Amarelo"
             reasons_yellow.append("Enxofre")
-            total_cost += calculate_sulfur_cost(row["% Enxofre"])
 
         # Construir justificativa
         if reasons_red:
@@ -102,10 +101,10 @@ def evaluate_coal(data):
                 else "Parâmetros dentro dos limites ideais."
             )
 
-        return status, justification, total_cost
+        return status, justification, total_cost, moisture_cost, ash_cost, sulfur_cost
 
     df = pd.DataFrame(data, index=[0])
-    df["Viabilidade"], df["Justificativa"], df["Custo Total Adicional (USD/t)"] = zip(*df.apply(evaluate, axis=1))
+    df["Viabilidade"], df["Justificativa"], df["Custo Total Adicional (USD/t)"], df["Custo Umidade (USD/t)"], df["Custo Cinzas (USD/t)"], df["Custo Enxofre (USD/t)"] = zip(*df.apply(evaluate, axis=1))
     return df
 
 # Interface do Streamlit
@@ -136,6 +135,9 @@ if st.button("Rodar Simulação"):
     st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
     st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
     st.write(f"**Custo Total Adicional (USD/t):** {df['Custo Total Adicional (USD/t)'].iloc[0]:.2f}")
+    st.write(f"**Custo por Umidade (USD/t):** {df['Custo Umidade (USD/t)'].iloc[0]:.2f}")
+    st.write(f"**Custo por Cinzas (USD/t):** {df['Custo Cinzas (USD/t)'].iloc[0]:.2f}")
+    st.write(f"**Custo por Enxofre (USD/t):** {df['Custo Enxofre (USD/t)'].iloc[0]:.2f}")
 
 # Frase no rodapé
 st.markdown("---")
