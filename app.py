@@ -12,22 +12,26 @@ CRITERIA = {
     "% Enxofre": {"green_max": 0.6, "yellow_max": 0.69, "red_min": 0.7},
 }
 
-# Tabelas de custos adicionais devido ao enxofre e cinzas (em USD/t)
-SULFUR_COST_TABLE = {
-    0.61: 4.97, 0.62: 5.01, 0.63: 5.05, 0.64: 5.14,
-    0.65: 5.24, 0.66: 5.33, 0.67: 5.39, 0.68: 5.45, 0.69: 5.47, 0.7: 6.00,
-}
-ASH_COST_TABLE = {
-    9.1: 0.0, 9.2: 0.0, 9.3: 10.54, 9.4: 21.08, 9.5: 31.62,
-    9.6: 42.15, 9.7: 52.69, 9.8: 63.23, 9.9: 73.77, 10.0: 84.31, 10.1: 90.00,
-}
-
-# Função para determinar o aumento recomendado no PCS com base na umidade
-def get_pcs_adjustment(humidity):
+# Função para calcular custo adicional com base na umidade
+def calculate_humidity_cost(pcs, humidity):
     if humidity <= 16:
         return 0
-    adjustment = (humidity - 16) * 2  # Cada 1% acima de 16 aumenta o PCS necessário em 2%
-    return round(adjustment, 2)
+    base_cost = (humidity - 16) * (0.1 + 0.02 * (pcs - 5700) / 100)
+    return round(base_cost, 2)
+
+# Função para calcular custo adicional com base nas cinzas
+def calculate_ash_cost(ash):
+    if ash <= 9:
+        return 0
+    base_cost = (ash - 9) * 10 + 5  # Exemplo de extrapolação
+    return round(base_cost, 2)
+
+# Função para calcular custo adicional com base no enxofre
+def calculate_sulfur_cost(sulfur):
+    if sulfur <= 0.6:
+        return 0
+    base_cost = (sulfur - 0.6) * 20  # Exemplo de extrapolação
+    return round(base_cost, 2)
 
 # Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
@@ -38,7 +42,7 @@ def evaluate_coal(data):
         status = "Verde"
         sulfur_cost = None
         ash_cost = None
-        pcs_adjustment = None
+        humidity_cost = None
 
         # Avaliação de PCS
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
@@ -66,20 +70,18 @@ def evaluate_coal(data):
             if status == "Verde":
                 status = "Amarelo"
             reasons_above.append("Cinzas")
-            rounded_ash = round(row["% Cinzas"], 1)
-            if rounded_ash in ASH_COST_TABLE:
-                ash_cost = ASH_COST_TABLE[rounded_ash]
+            ash_cost = calculate_ash_cost(row["% Cinzas"])
 
         # Avaliação de Umidade
         if row["% Umidade"] > CRITERIA["% Umidade"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Umidade")
-            pcs_adjustment = get_pcs_adjustment(row["% Umidade"])
+            humidity_cost = calculate_humidity_cost(row["PCS (kcal/kg)"], row["% Umidade"])
         elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
             if status == "Verde":
                 status = "Amarelo"
             reasons_above.append("Umidade")
-            pcs_adjustment = get_pcs_adjustment(row["% Umidade"])
+            humidity_cost = calculate_humidity_cost(row["PCS (kcal/kg)"], row["% Umidade"])
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
@@ -89,9 +91,7 @@ def evaluate_coal(data):
             if status == "Verde":
                 status = "Amarelo"
             reasons_above.append("Enxofre")
-            rounded_sulfur = round(row["% Enxofre"], 2)
-            if rounded_sulfur in SULFUR_COST_TABLE:
-                sulfur_cost = SULFUR_COST_TABLE[rounded_sulfur]
+            sulfur_cost = calculate_sulfur_cost(row["% Enxofre"])
 
         # Construir justificativa
         if reasons_red:
@@ -117,12 +117,14 @@ def evaluate_coal(data):
             justification,
             sulfur_cost,
             ash_cost,
-            pcs_adjustment,
+            humidity_cost,
         )
 
     # Avaliar cada registro no DataFrame
     df = pd.DataFrame(data, index=[0])
-    df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"], df["Ajuste PCS (%)"] = zip(*df.apply(evaluate, axis=1))
+    df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Cinzas (USD/t)"], df["Custo Umidade (USD/t)"] = zip(
+        *df.apply(evaluate, axis=1)
+    )
     return df
 
 # Interface do Streamlit
@@ -153,55 +155,25 @@ if st.button("Rodar Simulação"):
     st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
     st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
 
-    sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
-    ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
-    pcs_adjust = df["Ajuste PCS (%)"].iloc[0]
-    total_cost = 0
+    if df["Viabilidade"].iloc[0] != "Vermelho":
+        sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
+        ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
+        humidity_cost = df["Custo Umidade (USD/t)"].iloc[0]
+        total_cost = 0
 
-    if sulfur_cost:
-        st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
-        total_cost += sulfur_cost
-    if ash_cost:
-        st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
-        total_cost += ash_cost
-    if total_cost > 0:
-        st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
-    if pcs_adjust and pcs_adjust > 0:
-        st.write(f"**Recomendação:** Aumentar o PCS em {pcs_adjust:.2f}% para compensar a umidade excedente.")
+        if sulfur_cost:
+            st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
+            total_cost += sulfur_cost
+        if ash_cost:
+            st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
+            total_cost += ash_cost
+        if humidity_cost:
+            st.write(f"Custo adicional devido à umidade: {humidity_cost:.2f} USD/t")
+            total_cost += humidity_cost
+        if total_cost > 0:
+            st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
 
-    # Exibir gráfico de radar caso os parâmetros estejam na zona verde ou amarela
-    if df["Viabilidade"].iloc[0] in ["Verde", "Amarelo"]:
-        def plot_radar_chart(data):
-            variables = ["PCS (kcal/kg)", "PCI (kcal/kg)", "% Cinzas", "% Umidade", "% Enxofre"]
-            max_limits = [
-                CRITERIA[var]["green_min"] if "green_min" in CRITERIA[var] else max(data[var] for var in data)
-                for var in variables
-            ]
-            min_limits = [
-                CRITERIA[var]["red_max"] if "red_max" in CRITERIA[var] else min(data[var] for var in data)
-                for var in variables
-            ]
-
-            normalized_values = [
-                (data[var] - min_limits[i]) / (max_limits[i] - min_limits[i]) for i, var in enumerate(variables)
-            ]
-            angles = np.linspace(0, 2 * np.pi, len(variables), endpoint=False).tolist()
-            angles += angles[:1]
-            normalized_values += normalized_values[:1]
-
-            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-            ax.fill(angles, normalized_values, color="blue", alpha=0.25)
-            ax.plot(angles, normalized_values, color="blue", linewidth=2)
-            ax.set_yticks([])
-            ax.set_xticks(angles[:-1])
-            ax.set_xticklabels(variables)
-            ax.set_title("Avaliação de Parâmetros do Carvão", fontsize=14, pad=20)
-
-            st.pyplot(fig)
-
-        plot_radar_chart(data)
-
-# Frase no rodapé
+# Rodapé
 st.markdown("---")
 st.markdown(
     "<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>",
