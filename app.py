@@ -47,10 +47,14 @@ def calculate_ash_cost(ash):
         return interpolate_ash_cost(ash)
 
 def calculate_sulfur_cost(sulfur):
+    # Tabela de referência para custos de enxofre
     sulfur_cost_table = {
         0.60: 0.00,
         0.61: 4.97,
-        0.69: 5.20,
+        0.63: 5.05,
+        0.66: 5.33,
+        0.68: 5.45,
+        0.69: 5.20,  # Valor explícito para 0.69
     }
 
     def interpolate_sulfur_cost(sulfur):
@@ -60,14 +64,19 @@ def calculate_sulfur_cost(sulfur):
                 x1, y1 = sorted_keys[i], sulfur_cost_table[sorted_keys[i]]
                 x2, y2 = sorted_keys[i + 1], sulfur_cost_table[sorted_keys[i + 1]]
                 return round(y1 + (sulfur - x1) * (y2 - y1) / (x2 - x1), 2)
-        return 0.0  # Retorna 0.0 se não houver interpolação aplicável
+        return 0.0
 
     def extrapolate_sulfur_cost(sulfur):
         last_known_value = 0.69
         last_known_cost = 5.20
-        slope = 0.25
+        slope = 0.25  # Taxa de aumento por 0,01% de enxofre acima de 0.69%
         return round(last_known_cost + (sulfur - last_known_value) * slope, 2)
 
+    # Primeiro verifica se está na tabela
+    if sulfur in sulfur_cost_table:
+        return sulfur_cost_table[sulfur]
+
+    # Depois faz interpolação ou extrapolação, se necessário
     if sulfur <= 0.6:
         return 0.0
     elif sulfur > 0.7:
