@@ -12,34 +12,47 @@ CRITERIA = {
     "% Enxofre": {"green_max": 0.6, "yellow_min": 0.61, "red_min": 0.85},
 }
 
-# Dados da tabela de custo de enxofre
-SULFUR_COST_DATA = {
-    0.60: 0,
-    0.61: 4.97,
-    0.63: 5.05,
-    0.66: 5.33,
-    0.68: 5.45,
-    0.69: 5.47,
-}
+# Funções de custo para os parâmetros (interpolação/extrapolação)
 
-# Função para calcular o custo adicional do enxofre
+def custo_umidade(pcs, umidade):
+    tabela_umidade = {
+        5800: [0, 0.6, 0.7, 0.8, 0.9, 1.0],
+        5700: [0, 0.8, 0.92, 1.08, 1.23, 1.38],
+    }
+    valores_umidade = np.array(tabela_umidade[pcs])
+    indices_umidade = np.linspace(16, 17, len(valores_umidade))
+    if umidade < 16:
+        return 0
+    return np.interp(umidade, indices_umidade, valores_umidade)
+
+def custo_cinzas(cinzas):
+    tabela_cinzas = {
+        9.1: 10.65, 9.2: 20.78, 9.3: 30.36, 9.4: 39.42,
+        9.5: 47.94, 9.6: 55.80, 9.7: 63.26, 9.8: 70.05,
+        9.9: 76.31, 10.0: 82.04, 10.1: 87.23, 11.0: 108.80,
+    }
+    pontos = sorted(tabela_cinzas.items())
+    valores = np.array(pontos)
+    cinzas_ref = valores[:, 0]
+    custos = valores[:, 1]
+    if cinzas <= 9.0:
+        return 0
+    return np.interp(cinzas, cinzas_ref, custos)
+
 def custo_enxofre(s):
-    pontos = sorted(SULFUR_COST_DATA.items())
+    tabela_enxofre = {
+        0.60: 0, 0.61: 4.97, 0.63: 5.05, 0.66: 5.33,
+        0.68: 5.45, 0.69: 5.47,
+    }
+    pontos = sorted(tabela_enxofre.items())
     valores = np.array(pontos)
     enxofres = valores[:, 0]
     custos = valores[:, 1]
-
     if s <= enxofres[0]:
         return 0
+    return np.interp(s, enxofres, custos)
 
-    if enxofres[0] < s <= enxofres[-1]:
-        return np.interp(s, enxofres, custos)
-
-    if s > enxofres[-1]:
-        taxa = (custos[-1] - custos[-2]) / (enxofres[-1] - enxofres[-2])
-        return custos[-1] + (s - enxofres[-1]) * taxa
-
-# Função para avaliar o carvão com base nos critérios configuráveis
+# Função para avaliar o carvão
 def evaluate_coal(data):
     def evaluate(row):
         reasons_below = []  
@@ -48,6 +61,7 @@ def evaluate_coal(data):
         status = "Verde"
         sulfur_cost = 0
         ash_cost = 0
+        moisture_cost = 0
         pcs_adjustment = 0
 
         # Avaliação de PCS
@@ -76,6 +90,7 @@ def evaluate_coal(data):
             if status == "Verde":
                 status = "Amarelo"
             reasons_above.append("Cinzas")
+            ash_cost = custo_cinzas(row["% Cinzas"])
 
         # Avaliação de Umidade
         if row["% Umidade"] > CRITERIA["% Umidade"]["red_min"]:
@@ -85,6 +100,7 @@ def evaluate_coal(data):
             if status == "Verde":
                 status = "Amarelo"
             reasons_above.append("Umidade")
+            moisture_cost = custo_umidade(row["PCS (kcal/kg)"], row["% Umidade"])
 
         # Avaliação de Enxofre
         if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
@@ -96,50 +112,29 @@ def evaluate_coal(data):
             reasons_above.append("Enxofre")
             sulfur_cost = custo_enxofre(row["% Enxofre"])
 
-        # Construir justificativa
-        if reasons_red:
-            justification = f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, não sendo recomendada a sua aquisição."
-        else:
-            reasons_text = []
-            if reasons_below:
-                reasons_text.append(f"{', '.join(reasons_below)} abaixo do ideal")
-            if reasons_above:
-                reasons_text.append(f"{', '.join(reasons_above)} acima do ideal")
-            justification = (
-                "; ".join(reasons_text)
-                + ", podendo ser aceito sob determinadas condições. Contate a área técnica."
-                if reasons_text
-                else "Parâmetros dentro dos limites ideais. Enviar COA para análise completa."
-            )
-
-        total_cost = sulfur_cost if sulfur_cost else 0
-        return (
-            status,
-            justification,
-            sulfur_cost,
-            total_cost,
+        total_cost = sulfur_cost + ash_cost + moisture_cost
+        justification = (
+            f"Carvão com restrições técnicas: {', '.join(reasons_above)} "
+            if reasons_above
+            else "Parâmetros dentro dos limites ideais."
         )
 
-    # Avaliar cada registro no DataFrame
+        return status, justification, moisture_cost, ash_cost, sulfur_cost, total_cost
+
     df = pd.DataFrame(data, index=[0])
-    df["Viabilidade"], df["Justificativa"], df["Custo Enxofre (USD/t)"], df["Custo Total Adicional"] = zip(*df.apply(evaluate, axis=1))
+    df["Viabilidade"], df["Justificativa"], df["Custo por Umidade"], df["Custo por Cinzas"], df["Custo por Enxofre"], df["Custo Total Adicional"] = zip(*df.apply(evaluate, axis=1))
     return df
 
 # Interface do Streamlit
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
-st.markdown(
-    """
-    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("<h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>", unsafe_allow_html=True)
 
 # Inputs
-pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800.0)
-pci = st.number_input("PCI (kcal/kg)", min_value=0.0, step=100.0, value=5700.0)
-cinzas = st.number_input("% Cinzas", min_value=0.0, max_value=100.0, step=0.1, value=9.0)
-umidade = st.number_input("% Umidade", min_value=0.0, max_value=100.0, step=0.1, value=16.0)
-enxofre = st.number_input("% Enxofre", min_value=0.0, max_value=10.0, step=0.01, value=0.60)
+pcs = st.number_input("PCS (kcal/kg)", min_value=5700, step=10, value=5800)
+pci = st.number_input("PCI (kcal/kg)", min_value=5200, step=10, value=5700)
+cinzas = st.number_input("% Cinzas", min_value=8.0, max_value=12.0, step=0.1, value=9.0)
+umidade = st.number_input("% Umidade", min_value=15.0, max_value=20.0, step=0.1, value=16.5)
+enxofre = st.number_input("% Enxofre", min_value=0.5, max_value=1.0, step=0.01, value=0.61)
 
 if st.button("Rodar Simulação"):
     data = {
@@ -154,4 +149,6 @@ if st.button("Rodar Simulação"):
     st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
     st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
     st.write(f"**Custo Total Adicional (USD/t):** {df['Custo Total Adicional'].iloc[0]:.2f}")
-    st.write(f"Custo por Enxofre (USD/t): {df['Custo Enxofre (USD/t)'].iloc[0]:.2f}")
+    st.write(f"Custo por Umidade (USD/t): {df['Custo por Umidade'].iloc[0]:.2f}")
+    st.write(f"Custo por Cinzas (USD/t): {df['Custo por Cinzas'].iloc[0]:.2f}")
+    st.write(f"Custo por Enxofre (USD/t): {df['Custo por Enxofre'].iloc[0]:.2f}")
