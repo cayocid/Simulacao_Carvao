@@ -86,20 +86,19 @@ def evaluate_coal(data):
 
         # Construir justificativa
         if status == "Verde":
-            justification = "Carvão Tecnicamente Viável. Parâmetros dentro dos limites ideais."
+            viability = "Carvão Tecnicamente Viável"
+            justification = "Parâmetros dentro dos limites ideais."
         elif status == "Amarelo":
-            reasons_text = f"{', '.join(reasons_yellow)} na zona amarela"
-            justification = (
-                f"Carvão com restrições técnicas: {reasons_text}. "
-                "Pode ser aceito sob determinadas condições. Contate a área técnica."
-            )
+            viability = "Carvão com restrições técnicas"
+            justification = f"{', '.join(reasons_yellow)} na zona amarela, podendo ser aceito sob determinadas condições. Contate a área técnica."
         elif status == "Vermelho":
+            viability = "Carvão tecnicamente inviável"
             justification = (
-                f"Carvão tecnicamente inviável. Parâmetro(s) {', '.join(reasons_red)} "
-                "fora do limite especificado. Não sendo recomendada a sua aquisição."
+                f"Parâmetro(s) {', '.join(reasons_red)} fora do limite especificado. "
+                "Não sendo recomendada a sua aquisição."
             )
 
-        return status, justification, total_cost, moisture_cost, ash_cost, sulfur_cost
+        return viability, justification, total_cost, moisture_cost, ash_cost, sulfur_cost
 
     df = pd.DataFrame(data, index=[0])
     df["Viabilidade"], df["Justificativa"], df["Custo Total Adicional (USD/t)"], df["Custo Umidade (USD/t)"], df["Custo Cinzas (USD/t)"], df["Custo Enxofre (USD/t)"] = zip(*df.apply(evaluate, axis=1))
@@ -130,8 +129,8 @@ if st.button("Rodar Simulação"):
         "% Enxofre": enxofre,
     }
     df = evaluate_coal(data)
-    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
-    st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
+    st.markdown(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
+    st.markdown(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
     st.markdown(f"**Custo Total Adicional (USD/t): {df['Custo Total Adicional (USD/t)'].iloc[0]:.2f}**")
     st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Umidade (USD/t): {df['Custo Umidade (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
     st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Cinzas (USD/t): {df['Custo Cinzas (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
