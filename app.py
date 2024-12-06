@@ -9,7 +9,7 @@ CRITERIA = {
     "PCI (kcal/kg)": {"green_min": 5700, "yellow_min": 5601, "red_max": 5200},
     "% Cinzas": {"green_max": 9, "yellow_max": 9.9, "red_min": 12},
     "% Umidade": {"green_max": 16, "yellow_max": 16.9, "red_min": 18},
-    "% Enxofre": {"green_max": 0.6, "yellow_max": 0.69, "red_min": 0.85},
+    "% Enxofre": {"green_max": 0.6, "yellow_min": 0.61, "red_min": 0.85},
 }
 
 # Dados da tabela de custo de enxofre
@@ -24,21 +24,17 @@ SULFUR_COST_DATA = {
 
 # Função para calcular o custo adicional do enxofre
 def custo_enxofre(s):
-    # Ordenar os pontos da tabela
     pontos = sorted(SULFUR_COST_DATA.items())
     valores = np.array(pontos)
     enxofres = valores[:, 0]
     custos = valores[:, 1]
-    
-    # Se o valor de enxofre for menor ou igual ao limite mínimo
+
     if s <= enxofres[0]:
         return 0
 
-    # Interpolação linear
     if enxofres[0] < s <= enxofres[-1]:
         return np.interp(s, enxofres, custos)
 
-    # Extrapolação linear acima do maior ponto da tabela
     if s > enxofres[-1]:
         taxa = (custos[-1] - custos[-2]) / (enxofres[-1] - enxofres[-2])
         return custos[-1] + (s - enxofres[-1]) * taxa
@@ -46,13 +42,13 @@ def custo_enxofre(s):
 # Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
     def evaluate(row):
-        reasons_below = []  # Parâmetros abaixo do ideal
-        reasons_above = []  # Parâmetros acima do ideal
-        reasons_red = []  # Parâmetros na zona vermelha
+        reasons_below = []  
+        reasons_above = []  
+        reasons_red = []  
         status = "Verde"
-        sulfur_cost = None
-        ash_cost = None
-        pcs_adjustment = None
+        sulfur_cost = 0
+        ash_cost = 0
+        pcs_adjustment = 0
 
         # Avaliação de PCS
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
@@ -102,10 +98,7 @@ def evaluate_coal(data):
 
         # Construir justificativa
         if reasons_red:
-            justification = (
-                f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, "
-                f"não sendo recomendada a sua aquisição."
-            )
+            justification = f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, não sendo recomendada a sua aquisição."
         else:
             reasons_text = []
             if reasons_below:
@@ -157,7 +150,8 @@ if st.button("Rodar Simulação"):
         "% Enxofre": enxofre,
     }
     df = evaluate_coal(data)
+
     st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
     st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
-    st.write(f"Custo Total Adicional (USD/t): {df['Custo Total Adicional'].iloc[0]:.2f}")
+    st.write(f"**Custo Total Adicional (USD/t):** {df['Custo Total Adicional'].iloc[0]:.2f}")
     st.write(f"Custo por Enxofre (USD/t): {df['Custo Enxofre (USD/t)'].iloc[0]:.2f}")
