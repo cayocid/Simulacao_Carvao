@@ -9,7 +9,7 @@ CRITERIA = {
     "PCI (kcal/kg)": {"green_min": 5700, "yellow_min": 5601, "red_max": 5200},
     "% Cinzas": {"green_max": 9, "yellow_max": 9.9, "red_min": 12},
     "% Umidade": {"green_max": 16, "yellow_max": 16.9, "red_min": 18},
-    "% Enxofre": {"green_max": 0.6, "yellow_max": 0.69, "red_min": 0.85},
+    "% Enxofre": {"green_max": 0.6, "yellow_min": 0.69, "red_min": 0.85},
 }
 
 # Funções para calcular custos adicionais
@@ -93,10 +93,7 @@ def evaluate_coal(data):
             justification = f"{', '.join(reasons_yellow)} na zona amarela, podendo ser aceito sob determinadas condições. Contate a área técnica."
         elif status == "Vermelho":
             viability = "Carvão tecnicamente inviável"
-            justification = (
-                f"Parâmetro(s) {', '.join(reasons_red)} fora do limite especificado. "
-                "Não sendo recomendada a sua aquisição."
-            )
+            justification = f"Parâmetro(s) {', '.join(reasons_red)} fora do limite especificado. Não sendo recomendada a sua aquisição."
 
         return viability, justification, total_cost, moisture_cost, ash_cost, sulfur_cost
 
