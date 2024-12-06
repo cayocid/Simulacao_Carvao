@@ -46,7 +46,7 @@ def calculate_ash_cost(ash):
     else:
         return interpolate_ash_cost(ash)
 
-ddef calculate_sulfur_cost(sulfur):
+def calculate_sulfur_cost(sulfur):
     # Tabela de referência para custos de enxofre
     sulfur_cost_table = {
         0.60: 0.00,
