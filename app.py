@@ -16,26 +16,26 @@ CRITERIA = {
 def calculate_moisture_cost(pcs, moisture):
     if moisture <= 16:
         return 0
-    adjustment = max(0, (moisture - 16) * 2)  # Extrapolação linear
-    return round(adjustment * pcs / 1000, 2)  # Ajuste proporcional ao PCS
+    adjustment = max(0, (moisture - 16) * 2)
+    return round(adjustment * pcs / 1000, 2)
 
 def calculate_ash_cost(ash):
     if ash <= 9:
         return 0
     excess = max(0, ash - 9)
-    return round(10 * excess, 2)  # Exemplo de função linear para extrapolação
+    return round(10 * excess, 2)
 
 def calculate_sulfur_cost(sulfur):
     if sulfur <= 0.6:
         return 0
     excess = max(0, sulfur - 0.6)
-    return round(50 * excess, 2)  # Exemplo de função linear para extrapolação
+    return round(50 * excess, 2)
 
 # Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
     def evaluate(row):
-        reasons_red = []  # Parâmetros na zona vermelha
-        reasons_yellow = []  # Parâmetros na zona amarela
+        reasons_red = []
+        reasons_yellow = []
         status = "Verde"
 
         # Custos individuais
@@ -132,12 +132,10 @@ if st.button("Rodar Simulação"):
         "% Enxofre": enxofre,
     }
     df = evaluate_coal(data)
-    st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
-    st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
-    st.write(f"**Custo Total Adicional (USD/t):** {df['Custo Total Adicional (USD/t)'].iloc[0]:.2f}")
-    st.write(f"**Custo por Umidade (USD/t):** {df['Custo Umidade (USD/t)'].iloc[0]:.2f}")
-    st.write(f"**Custo por Cinzas (USD/t):** {df['Custo Cinzas (USD/t)'].iloc[0]:.2f}")
-    st.write(f"**Custo por Enxofre (USD/t):** {df['Custo Enxofre (USD/t)'].iloc[0]:.2f}")
+    st.markdown(f"**Custo Total Adicional (USD/t): {df['Custo Total Adicional (USD/t)'].iloc[0]:.2f}**")
+    st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Umidade (USD/t): {df['Custo Umidade (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Cinzas (USD/t): {df['Custo Cinzas (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Enxofre (USD/t): {df['Custo Enxofre (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
 
 # Frase no rodapé
 st.markdown("---")
