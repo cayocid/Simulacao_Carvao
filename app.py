@@ -9,110 +9,102 @@ CRITERIA = {
     "PCI (kcal/kg)": {"green_min": 5700, "yellow_min": 5601, "red_max": 5200},
     "% Cinzas": {"green_max": 9, "yellow_max": 9.9, "red_min": 12},
     "% Umidade": {"green_max": 16, "yellow_max": 16.9, "red_min": 18},
-    "% Enxofre": {"green_max": 0.6, "yellow_min": 0.69, "red_min": 0.85},
+    "% Enxofre": {"green_max": 0.6, "yellow_max": 0.69, "red_max": 0.85},
 }
 
-# Função para calcular o custo adicional por umidade excedente
-def calculate_moisture_cost(pcs, humidity):
-    base_humidity = 16
-    if humidity <= base_humidity:
-        return 0
-    excess_humidity = humidity - base_humidity
-    cost = max(0, (pcs - 5700) / 100) * excess_humidity * 0.2
-    return round(cost, 2)
+# Função para calcular custo adicional por umidade
+def calculate_moisture_cost_table(pcs, humidity):
+    # Tabela de referência
+    table = {
+        5700: [0, 0.11, 0.22, 0.32, 0.43, 0.54, 0.92, 1.08, 1.23, 1.38, 1.54],
+        5710: [0, 0, 0.09, 0.2, 0.3, 0.41, 0.86, 1.01, 1.17, 1.32, 1.47],
+        5720: [0, 0, 0, 0.07, 0.18, 0.29, 0.8, 0.95, 1.1, 1.26, 1.41],
+        5730: [0, 0, 0, 0, 0.05, 0.16, 0.73, 0.89, 1.04, 1.2, 1.35],
+        5740: [0, 0, 0, 0, 0, 0.03, 0.67, 0.82, 0.98, 1.13, 1.29],
+        5750: [0, 0, 0, 0, 0, 0, 0.61, 0.76, 0.92, 1.07, 1.22],
+        5760: [0, 0, 0, 0, 0, 0, 0.6, 0.7, 0.85, 1.01, 1.16],
+        5770: [0, 0, 0, 0, 0, 0, 0.6, 0.7, 0.8, 0.94, 1.1],
+        5780: [0, 0, 0, 0, 0, 0, 0.6, 0.7, 0.8, 0.9, 1.03],
+        5790: [0, 0, 0, 0, 0, 0, 0.6, 0.7, 0.8, 0.9, 1.0],
+        5800: [0, 0, 0, 0, 0, 0, 0.6, 0.7, 0.8, 0.9, 1.0],
+    }
+    humidities = [16.0, 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7, 16.8, 16.9, 17.0]
+    
+    # Verificar limites da tabela
+    if pcs < 5700 or pcs > 5800 or humidity < 16 or humidity > 17:
+        return 0  # Fora dos limites da tabela
 
-# Função para calcular o custo adicional por cinzas excedentes
-def calculate_ash_cost(ash):
-    if ash <= 9:
+    # Interpolação nos limites do PCS
+    pcs_keys = sorted(table.keys())
+    for i in range(len(pcs_keys) - 1):
+        if pcs_keys[i] <= pcs <= pcs_keys[i + 1]:
+            pcs_low, pcs_high = pcs_keys[i], pcs_keys[i + 1]
+            costs_low = table[pcs_low]
+            costs_high = table[pcs_high]
+            break
+    else:
         return 0
-    excess_ash = ash - 9
-    cost = 10 + (excess_ash * 10)
-    return round(cost, 2)
 
-# Função para calcular o custo adicional por enxofre excedente
-def calculate_sulfur_cost(sulfur):
-    if sulfur <= 0.6:
-        return 0
-    excess_sulfur = sulfur - 0.6
-    cost = 5 + (excess_sulfur * 15)
-    return round(cost, 2)
+    # Interpolação para os custos com base no PCS
+    interpolated_costs = [
+        np.interp(pcs, [pcs_low, pcs_high], [costs_low[j], costs_high[j]])
+        for j in range(len(humidities))
+    ]
 
-# Função para avaliar o carvão
+    # Interpolação para o custo final com base na umidade
+    final_cost = np.interp(humidity, humidities, interpolated_costs)
+    return round(final_cost, 2)
+
+# Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
     def evaluate(row):
-        reasons_red = []  # Parâmetros na zona vermelha
-        reasons_yellow = []  # Parâmetros na zona amarela
         status = "Verde"
-        ash_cost = calculate_ash_cost(row["% Cinzas"])
-        sulfur_cost = calculate_sulfur_cost(row["% Enxofre"])
-        moisture_cost = calculate_moisture_cost(row["PCS (kcal/kg)"], row["% Umidade"])
+        reasons_red = []
+        total_cost = 0
 
         # Avaliação de PCS
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
             status = "Vermelho"
             reasons_red.append("PCS")
-        elif row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["green_min"]:
-            if status == "Verde":
-                status = "Amarelo"
-            reasons_yellow.append("PCS")
 
         # Avaliação de PCI
         if row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["red_max"]:
             status = "Vermelho"
             reasons_red.append("PCI")
-        elif row["PCI (kcal/kg)"] < CRITERIA["PCI (kcal/kg)"]["green_min"]:
-            if status == "Verde":
-                status = "Amarelo"
-            reasons_yellow.append("PCI")
 
         # Avaliação de Cinzas
-        if row["% Cinzas"] >= CRITERIA["% Cinzas"]["red_min"]:
+        if row["% Cinzas"] > CRITERIA["% Cinzas"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Cinzas")
-        elif row["% Cinzas"] > CRITERIA["% Cinzas"]["green_max"]:
-            if status == "Verde":
-                status = "Amarelo"
-            reasons_yellow.append("Cinzas")
+            # Calcular custo com base na função para cinzas
 
         # Avaliação de Umidade
-        if row["% Umidade"] >= CRITERIA["% Umidade"]["red_min"]:
+        if row["% Umidade"] > CRITERIA["% Umidade"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Umidade")
-        elif row["% Umidade"] > CRITERIA["% Umidade"]["green_max"]:
-            if status == "Verde":
-                status = "Amarelo"
-            reasons_yellow.append("Umidade")
+            total_cost += calculate_moisture_cost_table(row["PCS (kcal/kg)"], row["% Umidade"])
 
         # Avaliação de Enxofre
-        if row["% Enxofre"] >= CRITERIA["% Enxofre"]["red_min"]:
+        if row["% Enxofre"] > CRITERIA["% Enxofre"]["red_min"]:
             status = "Vermelho"
             reasons_red.append("Enxofre")
-        elif row["% Enxofre"] > CRITERIA["% Enxofre"]["green_max"]:
-            if status == "Verde":
-                status = "Amarelo"
-            reasons_yellow.append("Enxofre")
 
+        # Construção da justificativa
         justification = (
-            f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red + reasons_yellow)} acima dos limites ideais."
-            if reasons_red or reasons_yellow
-            else "Todos os parâmetros estão dentro dos limites ideais."
+            f"Carvão com o(s) parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, "
+            "não sendo recomendada a sua aquisição."
+            if reasons_red
+            else "Parâmetros dentro dos limites ideais."
         )
 
-        return status, justification, ash_cost, sulfur_cost, moisture_cost
+        return status, justification, total_cost
 
-    # Avaliar os registros
     df = pd.DataFrame(data, index=[0])
-    df["Viabilidade"], df["Justificativa"], df["Custo Cinzas (USD/t)"], df["Custo Enxofre (USD/t)"], df["Custo Umidade (USD/t)"] = zip(*df.apply(evaluate, axis=1))
+    df["Viabilidade"], df["Justificativa"], df["Custo Total Adicional"] = zip(*df.apply(evaluate, axis=1))
     return df
 
 # Interface do Streamlit
-st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
-st.markdown(
-    """
-    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
-    """,
-    unsafe_allow_html=True,
-)
+st.title("Simulação de Viabilidade do Carvão Mineral")
 
 # Inputs
 pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800.0)
@@ -132,17 +124,4 @@ if st.button("Rodar Simulação"):
     df = evaluate_coal(data)
     st.write(f"**Viabilidade:** {df['Viabilidade'].iloc[0]}")
     st.write(f"**Justificativa:** {df['Justificativa'].iloc[0]}")
-
-    ash_cost = df["Custo Cinzas (USD/t)"].iloc[0]
-    sulfur_cost = df["Custo Enxofre (USD/t)"].iloc[0]
-    moisture_cost = df["Custo Umidade (USD/t)"].iloc[0]
-
-    st.write(f"Custo adicional devido às cinzas: {ash_cost:.2f} USD/t")
-    st.write(f"Custo adicional devido ao enxofre: {sulfur_cost:.2f} USD/t")
-    st.write(f"Custo adicional devido à umidade: {moisture_cost:.2f} USD/t")
-    total_cost = ash_cost + sulfur_cost + moisture_cost
-    st.write(f"**Custo Total Adicional:** {total_cost:.2f} USD/t")
-
-# Frase no rodapé
-st.markdown("---")
-st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
+    st.write(f"**Custo Total Adicional:** {df['Custo Total Adicional'].iloc[0]:.2f} USD/t")
