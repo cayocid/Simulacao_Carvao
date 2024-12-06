@@ -10,10 +10,9 @@ CRITERIA = {
     "% Enxofre": {"green_max": 0.6, "yellow_min": 0.69, "red_min": 0.85},
 }
 
-# Funções para calcular custos adicionais
 def calculate_moisture_cost(pcs, moisture):
     if moisture <= CRITERIA["% Umidade"]["green_max"]:
-        return 0
+        return 0.0  # Retorna 0.0 explicitamente para evitar problemas
     adjustment = max(0, (moisture - CRITERIA["% Umidade"]["green_max"]) * 2)
     return round(adjustment * pcs / 1000, 2)
 
@@ -32,7 +31,7 @@ def calculate_ash_cost(ash):
                 x1, y1 = sorted_keys[i], ash_cost_table[sorted_keys[i]]
                 x2, y2 = sorted_keys[i + 1], ash_cost_table[sorted_keys[i + 1]]
                 return round(y1 + (ash - x1) * (y2 - y1) / (x2 - x1), 2)
-        return None
+        return 0.0  # Retorna 0.0 se não houver interpolação aplicável
 
     def extrapolate_ash_cost(ash):
         last_known_value = 11.00
@@ -61,7 +60,7 @@ def calculate_sulfur_cost(sulfur):
                 x1, y1 = sorted_keys[i], sulfur_cost_table[sorted_keys[i]]
                 x2, y2 = sorted_keys[i + 1], sulfur_cost_table[sorted_keys[i + 1]]
                 return round(y1 + (sulfur - x1) * (y2 - y1) / (x2 - x1), 2)
-        return None
+        return 0.0  # Retorna 0.0 se não houver interpolação aplicável
 
     def extrapolate_sulfur_cost(sulfur):
         last_known_value = 0.69
@@ -85,8 +84,11 @@ def evaluate_coal(data):
         moisture_cost = calculate_moisture_cost(row["PCS (kcal/kg)"], row["% Umidade"])
         ash_cost = calculate_ash_cost(row["% Cinzas"])
         sulfur_cost = calculate_sulfur_cost(row["% Enxofre"])
-        total_cost = moisture_cost + ash_cost + sulfur_cost
 
+        # Garante que os custos sejam numéricos
+        total_cost = float(moisture_cost or 0.0) + float(ash_cost or 0.0) + float(sulfur_cost or 0.0)
+
+        # Avaliações de PCS, PCI, Cinzas, Umidade e Enxofre...
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
             status = "Vermelho"
             reasons_red.append("PCS")
