@@ -31,17 +31,20 @@ def calculate_moisture_cost(pcs, moisture):
     if moisture < 16.0:
         return 0.0
 
-    # Encontra os PCS mais próximos para interpolação
+    # Verificar se o PCS está dentro dos limites da tabela
     pcs_keys = sorted(moisture_cost_table.keys())
-    if pcs < pcs_keys[0] or pcs > pcs_keys[-1]:
-        return 0.0  # Fora dos limites da tabela
+    if pcs < pcs_keys[0]:
+        pcs = pcs_keys[0]
+    elif pcs > pcs_keys[-1]:
+        pcs = pcs_keys[-1]
 
+    # Encontra os PCS mais próximos para interpolação
     lower_pcs = max(k for k in pcs_keys if k <= pcs)
     upper_pcs = min(k for k in pcs_keys if k >= pcs)
 
-    # Encontrar índices para interpolação da umidade
+    # Verificar se a umidade está dentro dos limites da tabela
     if moisture > max(moisture_levels):
-        return 0.0  # Fora dos limites da tabela
+        moisture = max(moisture_levels)
 
     lower_moisture_idx = max(i for i, v in enumerate(moisture_levels) if v <= moisture)
     upper_moisture_idx = min(i for i, v in enumerate(moisture_levels) if v >= moisture)
