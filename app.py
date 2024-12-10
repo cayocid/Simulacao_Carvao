@@ -58,10 +58,26 @@ def calculate_moisture_cost(pcs, moisture):
             [lower_cost_lower_pcs, upper_cost_lower_pcs]
         )
     # Valores de custo para os PCS e umidades mais próximas
-    lower_cost_lower_pcs = moisture_cost_table[lower_pcs][lower_moisture_idx]
-    upper_cost_lower_pcs = moisture_cost_table[lower_pcs][upper_moisture_idx]
-    lower_cost_upper_pcs = moisture_cost_table[upper_pcs][lower_moisture_idx]
-    upper_cost_upper_pcs = moisture_cost_table[upper_pcs][upper_moisture_idx]
+    try:
+        lower_cost_lower_pcs = moisture_cost_table[lower_pcs][lower_moisture_idx]
+        upper_cost_lower_pcs = moisture_cost_table[lower_pcs][upper_moisture_idx]
+        lower_cost_upper_pcs = moisture_cost_table[upper_pcs][lower_moisture_idx]
+        upper_cost_upper_pcs = moisture_cost_table[upper_pcs][upper_moisture_idx]
+    except (KeyError, IndexError):
+        lower_cost_lower_pcs = 0.0
+        upper_cost_lower_pcs = 0.0
+        lower_cost_upper_pcs = 0.0
+        upper_cost_upper_pcs = 0.0
+    
+    if lower_moisture_idx == upper_moisture_idx or (lower_cost_lower_pcs == 0.0 and upper_cost_lower_pcs == 0.0):
+        cost_lower_pcs = lower_cost_lower_pcs
+    else:
+        cost_lower_pcs = np.interp(
+            moisture, 
+            [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
+            [lower_cost_lower_pcs, upper_cost_lower_pcs]
+        )
+
 
     # Interpolação para os valores de PCS
     cost_lower_pcs = np.interp(
