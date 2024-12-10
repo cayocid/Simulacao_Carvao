@@ -46,9 +46,17 @@ def calculate_moisture_cost(pcs, moisture):
     if moisture > max(moisture_levels):
         moisture = max(moisture_levels)
 
-    lower_moisture_idx = max(i for i, v in enumerate(moisture_levels) if v <= moisture)
-    upper_moisture_idx = min(i for i, v in enumerate(moisture_levels) if v >= moisture)
+    lower_moisture_idx = max((i for i, v in enumerate(moisture_levels) if v <= moisture), default=0)
+    upper_moisture_idx = min((i for i, v in enumerate(moisture_levels) if v >= moisture), default=len(moisture_levels) - 1)
 
+    if lower_moisture_idx == upper_moisture_idx:
+        cost_lower_pcs = lower_cost_lower_pcs  # Evita interpolação desnecessária
+    else:
+        cost_lower_pcs = np.interp(
+            moisture,
+            [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
+            [lower_cost_lower_pcs, upper_cost_lower_pcs]
+        )
     # Valores de custo para os PCS e umidades mais próximas
     lower_cost_lower_pcs = moisture_cost_table[lower_pcs][lower_moisture_idx]
     upper_cost_lower_pcs = moisture_cost_table[lower_pcs][upper_moisture_idx]
