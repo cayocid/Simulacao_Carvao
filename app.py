@@ -26,57 +26,83 @@ def calculate_moisture_cost(pcs, moisture):
         5800: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.00],
     }
     moisture_levels = [16.00, 16.10, 16.20, 16.30, 16.40, 16.50, 16.60, 16.70, 16.80, 16.90, 17.00]
+def calculate_moisture_cost(pcs, moisture):
+    moisture_cost_table = {
+        5700: [0.00, 0.11, 0.22, 0.32, 0.43, 0.54, 0.92, 1.08, 1.23, 1.38, 1.54],
+        5710: [0.00, 0.00, 0.09, 0.20, 0.30, 0.41, 0.86, 1.01, 1.17, 1.32, 1.47],
+        5720: [0.00, 0.00, 0.00, 0.07, 0.18, 0.29, 0.80, 0.95, 1.10, 1.26, 1.41],
+        5730: [0.00, 0.00, 0.00, 0.00, 0.05, 0.16, 0.73, 0.89, 1.04, 1.20, 1.35],
+        5740: [0.00, 0.00, 0.00, 0.00, 0.00, 0.03, 0.67, 0.82, 0.98, 1.13, 1.29],
+        5750: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.61, 0.76, 0.92, 1.07, 1.22],
+        5760: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.85, 1.01, 1.16],
+        5770: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.94, 1.10],
+        5780: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.03],
+        5790: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.00],
+        5800: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.00],
+    }
+    moisture_levels = [16.00, 16.10, 16.20, 16.30, 16.40, 16.50, 16.60, 16.70, 16.80, 16.90, 17.00]
 
-    # Verificar se a umidade está abaixo do limite mínimo
     if moisture < 16.0:
         return 0.0
 
-    # Verificar se o PCS está dentro dos limites da tabela
     pcs_keys = sorted(moisture_cost_table.keys())
     if pcs < pcs_keys[0]:
         pcs = pcs_keys[0]
     elif pcs > pcs_keys[-1]:
         pcs = pcs_keys[-1]
 
-    # Encontra os PCS mais próximos para interpolação
     lower_pcs = max(k for k in pcs_keys if k <= pcs)
     upper_pcs = min(k for k in pcs_keys if k >= pcs)
-
-    # Verificar se a umidade está dentro dos limites da tabela
     if moisture > max(moisture_levels):
         moisture = max(moisture_levels)
 
     lower_moisture_idx = max((i for i, v in enumerate(moisture_levels) if v <= moisture), default=0)
     upper_moisture_idx = min((i for i, v in enumerate(moisture_levels) if v >= moisture), default=len(moisture_levels) - 1)
 
-    if lower_moisture_idx == upper_moisture_idx:
-        cost_lower_pcs = lower_cost_lower_pcs  # Evita interpolação desnecessária
-    else:
-        cost_lower_pcs = np.interp(
-            moisture,
-            [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
-            [lower_cost_lower_pcs, upper_cost_lower_pcs]
-        )
-    # Valores de custo para os PCS e umidades mais próximas
     try:
         lower_cost_lower_pcs = moisture_cost_table[lower_pcs][lower_moisture_idx]
-        upper_cost_lower_pcs = moisture_cost_table[lower_pcs][upper_moisture_idx]
-        lower_cost_upper_pcs = moisture_cost_table[upper_pcs][lower_moisture_idx]
-        upper_cost_upper_pcs = moisture_cost_table[upper_pcs][upper_moisture_idx]
     except (KeyError, IndexError):
         lower_cost_lower_pcs = 0.0
+
+    try:
+        upper_cost_lower_pcs = moisture_cost_table[lower_pcs][upper_moisture_idx]
+    except (KeyError, IndexError):
         upper_cost_lower_pcs = 0.0
+
+    try:
+        lower_cost_upper_pcs = moisture_cost_table[upper_pcs][lower_moisture_idx]
+    except (KeyError, IndexError):
         lower_cost_upper_pcs = 0.0
+
+    try:
+        upper_cost_upper_pcs = moisture_cost_table[upper_pcs][upper_moisture_idx]
+    except (KeyError, IndexError):
         upper_cost_upper_pcs = 0.0
-    
+
     if lower_moisture_idx == upper_moisture_idx or (lower_cost_lower_pcs == 0.0 and upper_cost_lower_pcs == 0.0):
         cost_lower_pcs = lower_cost_lower_pcs
     else:
         cost_lower_pcs = np.interp(
-            moisture, 
+            moisture,
             [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
-            [lower_cost_lower_pcs, upper_cost_lower_pcs]
+            [lower_cost_lower_pcs, upper_cost_lower_pcs],
         )
+
+    if lower_moisture_idx == upper_moisture_idx or (lower_cost_upper_pcs == 0.0 and upper_cost_upper_pcs == 0.0):
+        cost_upper_pcs = lower_cost_upper_pcs
+    else:
+        cost_upper_pcs = np.interp(
+            moisture,
+            [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
+            [lower_cost_upper_pcs, upper_cost_upper_pcs],
+        )
+
+    if lower_pcs != upper_pcs:
+        final_cost = np.interp(pcs, [lower_pcs, upper_pcs], [cost_lower_pcs, cost_upper_pcs])
+    else:
+        final_cost = cost_lower_pcs
+
+    return round(final_cost, 2)
 
 
     # Interpolação para os valores de PCS
