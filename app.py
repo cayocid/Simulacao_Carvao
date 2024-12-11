@@ -200,7 +200,8 @@ def evaluate_coal(data):
             status = "Amarelo"
             reasons_yellow.append("Enxofre")
 
-                if status == "Verde":
+        
+        if status == "Verde":
             viability = "Carvão Tecnicamente Viável"
             justification = "Parâmetros dentro dos limites ideais."
         elif status == "Amarelo":
@@ -209,6 +210,7 @@ def evaluate_coal(data):
         else:
             viability = "Carvão tecnicamente inviável"
             justification = f"Parâmetro(s) {', '.join(reasons_red)} fora do limite especificado, não sendo recomendada a sua aquisição."
+
 
         return viability, justification, total_cost, moisture_cost, ash_cost, sulfur_cost
 
