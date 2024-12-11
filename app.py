@@ -1,4 +1,5 @@
 import streamlit as st
+import numpy as np
 import pandas as pd
 
 # Critérios configuráveis para avaliação
@@ -10,22 +11,7 @@ CRITERIA = {
     "% Enxofre": {"green_max": 0.6, "yellow_min": 0.69, "red_min": 0.85},
 }
 
-def calculate_moisture_cost(pcs, moisture):
-    # Tabela representando os valores de custo baseados em PCS e umidade
-    moisture_cost_table = {
-        5700: [0.00, 0.11, 0.22, 0.32, 0.43, 0.54, 0.92, 1.08, 1.23, 1.38, 1.54],
-        5710: [0.00, 0.00, 0.09, 0.20, 0.30, 0.41, 0.86, 1.01, 1.17, 1.32, 1.47],
-        5720: [0.00, 0.00, 0.00, 0.07, 0.18, 0.29, 0.80, 0.95, 1.10, 1.26, 1.41],
-        5730: [0.00, 0.00, 0.00, 0.00, 0.05, 0.16, 0.73, 0.89, 1.04, 1.20, 1.35],
-        5740: [0.00, 0.00, 0.00, 0.00, 0.00, 0.03, 0.67, 0.82, 0.98, 1.13, 1.29],
-        5750: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.61, 0.76, 0.92, 1.07, 1.22],
-        5760: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.85, 1.01, 1.16],
-        5770: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.94, 1.10],
-        5780: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.03],
-        5790: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.00],
-        5800: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, 0.70, 0.80, 0.90, 1.00],
-    }
-    moisture_levels = [16.00, 16.10, 16.20, 16.30, 16.40, 16.50, 16.60, 16.70, 16.80, 16.90, 17.00]
+# Função para calcular o custo de umidade baseado em tabela
 def calculate_moisture_cost(pcs, moisture):
     moisture_cost_table = {
         5700: [0.00, 0.11, 0.22, 0.32, 0.43, 0.54, 0.92, 1.08, 1.23, 1.38, 1.54],
@@ -104,26 +90,7 @@ def calculate_moisture_cost(pcs, moisture):
 
     return round(final_cost, 2)
 
-
-    # Interpolação para os valores de PCS
-    cost_lower_pcs = np.interp(
-        moisture, [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
-        [lower_cost_lower_pcs, upper_cost_lower_pcs]
-    )
-    cost_upper_pcs = np.interp(
-        moisture, [moisture_levels[lower_moisture_idx], moisture_levels[upper_moisture_idx]],
-        [lower_cost_upper_pcs, upper_cost_upper_pcs]
-    )
-
-    # Interpolação final entre os valores de PCS
-    if lower_pcs != upper_pcs:  # Interpolação necessária
-        final_cost = np.interp(pcs, [lower_pcs, upper_pcs], [cost_lower_pcs, cost_upper_pcs])
-    else:  # Sem necessidade de interpolação
-        final_cost = cost_lower_pcs
-
-    return round(final_cost, 2)
-
-
+# Funções de cálculo de cinzas e enxofre
 def calculate_ash_cost(ash):
     ash_cost_table = {
         8.00: 0.00,
@@ -139,7 +106,7 @@ def calculate_ash_cost(ash):
                 x1, y1 = sorted_keys[i], ash_cost_table[sorted_keys[i]]
                 x2, y2 = sorted_keys[i + 1], ash_cost_table[sorted_keys[i + 1]]
                 return round(y1 + (ash - x1) * (y2 - y1) / (x2 - x1), 2)
-        return 0.0  # Retorna 0.0 se não houver interpolação aplicável
+        return 0.0
 
     def extrapolate_ash_cost(ash):
         last_known_value = 11.00
@@ -155,14 +122,13 @@ def calculate_ash_cost(ash):
         return interpolate_ash_cost(ash)
 
 def calculate_sulfur_cost(sulfur):
-    # Tabela de referência para custos de enxofre
     sulfur_cost_table = {
         0.60: 0.00,
         0.61: 4.97,
         0.63: 5.05,
         0.66: 5.33,
         0.68: 5.45,
-        0.70: 5.47,  # Custo ajustado para 0.69 ser interpolado corretamente
+        0.70: 5.47,
     }
 
     def interpolate_sulfur_cost(sulfur):
@@ -177,15 +143,9 @@ def calculate_sulfur_cost(sulfur):
     def extrapolate_sulfur_cost(sulfur):
         last_known_value = 0.70
         last_known_cost = 5.47
-        slope = 0.25  # Taxa de aumento por 0,01% de enxofre acima de 0.70%
+        slope = 0.25
         return round(last_known_cost + (sulfur - last_known_value) * slope, 2)
 
-    # Verifica se o valor é próximo de um da tabela (para evitar problemas de precisão)
-    for key in sulfur_cost_table.keys():
-        if abs(sulfur - key) < 1e-6:  # Tolerância de precisão
-            return sulfur_cost_table[key]
-
-    # Interpolação ou extrapolação
     if sulfur <= 0.6:
         return 0.0
     elif sulfur > 0.7:
@@ -193,6 +153,7 @@ def calculate_sulfur_cost(sulfur):
     else:
         return interpolate_sulfur_cost(sulfur)
 
+# Função para avaliar o carvão com base nos critérios configuráveis
 def evaluate_coal(data):
     def evaluate(row):
         reasons_red = []
@@ -202,11 +163,8 @@ def evaluate_coal(data):
         moisture_cost = calculate_moisture_cost(row["PCS (kcal/kg)"], row["% Umidade"])
         ash_cost = calculate_ash_cost(row["% Cinzas"])
         sulfur_cost = calculate_sulfur_cost(row["% Enxofre"])
+        total_cost = moisture_cost + ash_cost + sulfur_cost
 
-        # Garante que os custos sejam numéricos
-        total_cost = float(moisture_cost or 0.0) + float(ash_cost or 0.0) + float(sulfur_cost or 0.0)
-
-        # Avaliações de PCS, PCI, Cinzas, Umidade e Enxofre...
         if row["PCS (kcal/kg)"] < CRITERIA["PCS (kcal/kg)"]["red_max"]:
             status = "Vermelho"
             reasons_red.append("PCS")
@@ -260,7 +218,12 @@ def evaluate_coal(data):
 
 # Interface do Streamlit
 st.image("https://energiapecem.com/images/logo-principal-sha.svg", caption="Energia Pecém", use_container_width=True)
-st.markdown("<h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>", unsafe_allow_html=True)
+st.markdown(
+    """
+    <h1 style='text-align: center;'>Simulação de Viabilidade do Carvão Mineral</h1>
+    """,
+    unsafe_allow_html=True,
+)
 
 pcs = st.number_input("PCS (kcal/kg)", min_value=0.0, step=100.0, value=5800.0)
 pci = st.number_input("PCI (kcal/kg)", min_value=0.0, step=100.0, value=5700.0)
@@ -285,4 +248,7 @@ if st.button("Rodar Simulação"):
     st.markdown(f"<p style='margin-left: 20px; font-size: 90%;'>Custo por Enxofre (USD/t): {df['Custo Enxofre (USD/t)'].iloc[0]:.2f}</p>", unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align: center;'>Esta análise é baseada nos critérios de referência do carvão de performance.</p>",
+    unsafe_allow_html=True,
+)
